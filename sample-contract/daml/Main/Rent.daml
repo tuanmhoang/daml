@@ -1,0 +1,89 @@
+module Main.Rent where
+
+import Daml.Script
+
+template RentAgreement -- creating template
+    with -- information
+        landlord: Party
+        tenant: Party
+        rentAmount: Decimal
+        currency: Text
+        paymentDate: Int
+        terms: Text
+    where
+        signatory landlord, tenant -- signatory: party/group of parties has CRUD on a particular entity
+
+
+template RentProposal -- creating template
+    with -- information
+        landlord: Party
+        tenant: Party
+        rentAmount: Decimal
+        currency: Text
+        paymentDate: Int
+        terms: Text
+    where
+        signatory landlord
+        controller tenant can -- can act on this
+            AcceptProposal: ContractId RentAgreement -- "AcceptProposal" call anything if we want, and we create a RentAgreement
+                do 
+                    create RentAgreement with ..
+            -- the same with below lines of code
+            -- 1>
+            --do
+            --    create RentAgreement with  
+            --        landlord -- this is the same as landlord: landlord, when the same name, can skip
+            --        tenant
+            --        rentAmount
+            --        currency
+            --        paymentDate
+            --        terms
+            --
+            -- 2>
+            -- do create RentAgreement with landlord, tenant, rentAmount, currency, paymentDate, terms
+            
+            
+            RejectProposal: ContractId Rejection
+                with rejectReason: Text
+                do
+                    create Rejection with ..
+
+template Rejection -- creating template
+    with -- information
+        landlord: Party
+        tenant: Party
+        rentAmount: Decimal
+        currency: Text
+        paymentDate: Int
+        terms: Text
+        rejectReason: Text
+    where
+        signatory landlord, tenant
+
+rentTest : Script ()
+rentTest = script do
+
+    landlord <- allocateParty "Alice"
+    tenant <- allocateParty "Bob"
+    
+    -- compare to Java: RentAgreement agreement = new RentAgreement()
+    rentProposal <- submit landlord do -- landlord submits an agreement
+        createCmd RentProposal with -- create is similar to new in Java
+            landlord = landlord
+            tenant = tenant
+            rentAmount = 1000.0
+            currency = "USD"
+            paymentDate = 10
+            terms = "Terms and conditions"
+
+-- accept proposal
+--    submit tenant do
+--        exerciseCmd rentProposal AcceptProposal -- exerciseCmd is use to exercise a particular choice with params on an existing contract instance
+
+-- reject proposal
+    submit tenant do
+        exerciseCmd rentProposal RejectProposal with rejectReason = "TOO EXPENSIVE"
+
+
+    return ()
+
